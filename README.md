@@ -3,6 +3,8 @@
 This repository implements the **CQRS (Command Query Responsibility Segregation) Pattern** using AWS services, including AWS Lambda, Amazon DynamoDB, Amazon SNS, and AWS API Gateway. The CQRS Pattern separates read and write operations for a data store, optimizing them independently for performance and scalability.
 
 ## 🏗️ Architectural Overview
+![image](https://github.com/user-attachments/assets/b25018d9-acb5-41e2-a938-a80b1aa5ad85)
+
 
 The **CQRS Pattern** architecture consists of the following components:
 
