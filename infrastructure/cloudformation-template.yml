@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for AWS CQRS Pattern
+
+Parameters:
+  LambdaRuntime:
+    Type: String
+    Default: python3.9
+    AllowedValues:
+      - python3.9
+      - dotnetcore3.1
+      - nodejs14.x
+    Description: The runtime environment for AWS Lambda functions
+
+Resources:
+  # API Gateway
+  ApiGatewayRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: CQRSApi
+
+  # Amazon SNS Topic
+  CqrsSnsTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: cqrs-sns-topic
+
+  # Command DynamoDB Table
+  CommandDynamoDBTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: CommandDB
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  # Query DynamoDB Table
+  QueryDynamoDBTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: QueryDB
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  # Command Handler Lambda
+  CommandHandlerLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: CommandHandler
+      Runtime: !Ref LambdaRuntime
+      Handler: CommandHandler::CommandHandler.Function::FunctionHandler
+      Code:
+        S3Bucket: your-s3-bucket-name
+        S3Key: command-handler.zip
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref CqrsSnsTopic
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+
+  # Update Processor Lambda
+  UpdateProcessorLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: UpdateProcessor
+      Runtime: !Ref LambdaRuntime
+      Handler: UpdateProcessor::UpdateProcessor.Function::FunctionHandler
+      Code:
+        S3Bucket: your-s3-bucket-name
+        S3Key: update-processor.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref CommandDynamoDBTable
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+
+  # Query Handler Lambda
+  QueryHandlerLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: QueryHandler
+      Runtime: !Ref LambdaRuntime
+      Handler: QueryHandler::QueryHandler.Function::FunctionHandler
+      Code:
+        S3Bucket: your-s3-bucket-name
+        S3Key: query-handler.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref QueryDynamoDBTable
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+
+  # SNS Subscription for Update Processor Lambda
+  UpdateProcessorSubscription:
+    Type: 'AWS::SNS::Subscription'
+    Properties:
+      TopicArn: !Ref CqrsSnsTopic
+      Protocol: lambda
+      Endpoint: !GetAtt UpdateProcessorLambda.Arn
+
+Outputs:
+  ApiGatewayUrl:
+    Description: The URL of the API Gateway
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com'

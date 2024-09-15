@@ -1,0 +1,41 @@
+name: Deploy AWS Lambda - Update Processor
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: 'us-east-1'
+
+    - name: Build .NET project
+      run: dotnet build update-processor/src/update-processor/update-processor.csproj --configuration Release
+
+    - name: Publish .NET project
+      run: dotnet publish update-processor/src/update-processor/update-processor.csproj --configuration Release --output ./output
+
+    - name: Zip output for deployment
+      run: zip -r update-processor.zip ./output/*
+
+    - name: Upload deployment package to S3
+      run: aws s3 cp update-processor.zip s3://your-s3-bucket-name/
+
+    - name: Deploy Lambda function
+      run: |
+        aws lambda update-function-code \
+          --function-name CommandHandler \
+          --s3-bucket your-s3-bucket-name \
+          --s3-key update-processor.zip

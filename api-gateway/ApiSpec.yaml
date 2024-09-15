@@ -1,0 +1,83 @@
+openapi: 3.0.1
+info:
+  title: CQRS API Gateway
+  description: API Gateway for the CQRS Pattern on AWS using AWS Lambda functions.
+  version: 1.0.0
+
+paths:
+  /command/insert:
+    post:
+      summary: Insert data into Command DB
+      operationId: InsertData
+      requestBody:
+        description: Data to be inserted
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+                  example: "Sample data"
+      responses:
+        '200':
+          description: Data inserted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Data inserted successfully"
+        '400':
+          description: Invalid input data
+        '500':
+          description: Server error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CommandHandlerLambda.Arn}/invocations
+        passthroughBehavior: when_no_match
+        payloadFormatVersion: "2.0"
+
+  /query/get:
+    get:
+      summary: Get data from Query DB
+      operationId: GetData
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID of the data to retrieve
+      responses:
+        '200':
+          description: Data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "1234"
+                  data:
+                    type: string
+                    example: "Sample data"
+        '400':
+          description: Invalid ID
+        '404':
+          description: Data not found
+        '500':
+          description: Server error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: GET
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${QueryHandlerLambda.Arn}/invocations
+        passthroughBehavior: when_no_match
+        payloadFormatVersion: "2.0"

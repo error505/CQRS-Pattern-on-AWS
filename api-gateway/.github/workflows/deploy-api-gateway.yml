@@ -1,0 +1,30 @@
+name: Deploy API Gateway
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-api-gateway:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: 'us-east-1'
+
+    - name: Deploy API Gateway using AWS CLI
+      run: |
+        aws apigateway import-rest-api \
+          --fail-on-warnings \
+          --parameters "endpointConfigurationTypes=REGIONAL" \
+          --body 'file://api-gateway/ApiSpec.yaml' \
+          --region $AWS_REGION
